@@ -3,7 +3,6 @@
 
 #include <QMainWindow>
 #include <QMenu>
-#include <QWebSocketServer>
 #include <QWidget>
 #include <QtWebKitWidgets/QWebFrame>
 #include <QtWebKitWidgets/QWebView>
@@ -33,12 +32,10 @@ class MainWindow : public QMainWindow {
 
   // Define signals and slots
   QString optStartupUrl = "./www/index.html";
-  int optWebSocketServerPort = 0;
   int optWidth = 0;
   int optHeight = 0;
   bool optEnableJSBridge = true;
   bool optEnableOSBridge = true;
-  QString optWebSocketServerKey = "";
   QString optProxyHost = "";
   int optProxyPort = 0;
 
@@ -46,7 +43,6 @@ class MainWindow : public QMainWindow {
   JSBridge jsBridge;
   OSBridge osBridge;
   QWebView *webView;
-  QWebSocketServer webSocketServer;
   explicit MainWindow();
   ~MainWindow();
   void configureWebView();
@@ -56,8 +52,6 @@ class MainWindow : public QMainWindow {
  public slots:
   void loadStartupUrl();
   void onLoadStarted();
-  void onNewWebSocketConnection();
-  void onWebSocketTextMessageReceived(QString message);
 };
 
 #endif  // BROWSERWINDOW_H
