@@ -1,5 +1,5 @@
 arm编译捷径
-```bash
+```shell
 sudo apt-get install qtbase5-dev qtchooser qt5-qmake qtbase5-dev-tools
 sudo apt-get install libqt5webkit5-dev qtdeclarative5-dev qt5-qmake cmake
 git clone https://github.com/44670/fbrowser
@@ -7,6 +7,8 @@ cd fbrowser
 mkdir build;cd build;cmake ..;make
 ./FBrowser --platform linuxfb
 ```
+riscv64也许也可以这样？
+
 
 # FBrowser
 QtWebKit-based web browser on Linux framebuffer.
