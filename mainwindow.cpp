@@ -8,8 +8,6 @@
 #include <QJsonObject>
 #include <QNetworkProxy>
 #include <QTimer>
-#include <QWebSocket>
-#include <QWebSocketServer>
 #include <QProcess>
 
 
@@ -52,31 +50,9 @@ void MainWindow::configureWebView() {
 
 MainWindow::MainWindow()
     : QMainWindow(),
-      webSocketServer("", QWebSocketServer::SslMode::NonSecureMode, this),
       jsBridge(this) ,
       osBridge(this) {
   loadConfig();
-  if (optWebSocketServerPort > 0) {
-    QHostAddress address;
-    if (optWebSocketServerKey == "") {
-      qDebug() << "[ws] WebSocketServer listening at 127.0.0.1 because no key was "
-                  "provided.";
-      address = QHostAddress::LocalHost;
-    } else {
-      qDebug() << "[ws] WebSocketServer listening at 0.0.0.0 (AnyIPv4) because a key "
-                  "was provided.";
-      address = QHostAddress::AnyIPv4;
-    }
-    // TODO: Wait and retry if port is busy
-    if (webSocketServer.listen(address, optWebSocketServerPort)) {
-      qDebug() << "WebSocketServer listening on port" << optWebSocketServerPort;
-    } else {
-      qDebug() << "WebSocketServer failed to listen on port"
-               << optWebSocketServerPort;
-    }
-    connect(&webSocketServer, SIGNAL(newConnection()), this,
-            SLOT(onNewWebSocketConnection()));
-  }
 
   // Load proxy settings
   if (optProxyHost != "") {
@@ -157,14 +133,7 @@ void MainWindow::loadConfig() {
   if (configObject.contains("url") && (!haveUrlInCmdLine)) {
     optStartupUrl = configObject["url"].toString();
   }
-  // Load websocket port
-  if (configObject.contains("wsServerPort")) {
-    optWebSocketServerPort = configObject["wsServerPort"].toInt();
-  }
-  // Load websocket key
-  if (configObject.contains("wsServerKey")) {
-    optWebSocketServerKey = configObject["wsServerKey"].toString();
-  }
+
   // Load window size
   if (configObject.contains("width")) {
     optWidth = configObject["width"].toInt();
@@ -185,72 +154,6 @@ void MainWindow::loadConfig() {
   if (configObject.contains("enableOSBridge")) {
     optEnableOSBridge = configObject["enableOSBridge"].toBool();
   }
-}
-
-void MainWindow::onNewWebSocketConnection() {
-  bool isAuthenticated = false;
-
-  qDebug() << "[ws] New WebSocket connection";
-  QWebSocket *webSocket = webSocketServer.nextPendingConnection();
-
-  QString host = webSocket->peerAddress().toString();
-  qDebug() << "[ws] Connection from " << host;
-  QString clientSentKey = webSocket->request().rawHeader("X-FB-Key");
-  if (optWebSocketServerKey != "") {
-    if (clientSentKey == optWebSocketServerKey) {
-      qDebug() << "[ws] Accepted connection from " << host << " by key.";
-      isAuthenticated = true;
-    }
-  } else {
-    // Only allow 127.0.0.1 if no key is set
-    if (host == "127.0.0.1") {
-      qDebug() << "[ws] Accepted connection from " << host << " by default.";
-      isAuthenticated = true;
-    } else {
-      qDebug() << "[ws] Rejected connection from " << host << " by default.";
-    }
-  }
-  if (!isAuthenticated) {
-    webSocket->close();
-    return;
-  }
-
-  connect(webSocket, SIGNAL(textMessageReceived(QString)), this,
-          SLOT(onWebSocketTextMessageReceived(QString)));
-  connect(webSocket, SIGNAL(disconnected()), webSocket, SLOT(deleteLater()));
-}
-
-void MainWindow::onWebSocketTextMessageReceived(QString message) {
-  qDebug() << "[ws] Received message: " << message;
-  QWebSocket *webSocket = qobject_cast<QWebSocket *>(sender());
-  // Parse message as JSON Array
-  QJsonDocument jsonDoc = QJsonDocument::fromJson(message.toUtf8());
-  QJsonArray jsonArray = jsonDoc.array();
-  if (jsonArray.size() == 0) {
-    return;
-  }
-  QString cmd = jsonArray[0].toString();
-  QString arg1 = jsonArray[1].toString();
-  QJsonArray resp = QJsonArray();
-  resp.append("ok");
-  if (cmd == "loadUrl") {
-    qDebug() << "[ws] Loading URL: " << arg1;
-    webView->load(QUrl(arg1));
-  } else if (cmd == "clearCache") {
-    qDebug() << "[ws] Clearing cache";
-    webView->page()->networkAccessManager()->clearAccessCache();
-    webView->page()->networkAccessManager()->clearConnectionCache();
-  } else if (cmd == "exit") {
-    qDebug() << "[ws] Exiting";
-    QApplication::quit();
-  } else if (cmd == "eval") {
-    // Eval JavaScript in current page
-    qDebug() << "[ws] Evaluating JavaScript: " << arg1;
-    resp.append(
-        webView->page()->mainFrame()->evaluateJavaScript(arg1).toString());
-  }
-
-  webSocket->sendTextMessage(QJsonDocument(resp).toJson());
 }
 
 
