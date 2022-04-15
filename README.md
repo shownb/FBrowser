@@ -1,5 +1,9 @@
 arm编译捷径
 ```shell
+sudo apt-get install qt5-qmake cmake libqt5webkit5-dev git
+```
+
+```shell
 sudo apt-get install qtbase5-dev qtchooser qt5-qmake qtbase5-dev-tools
 sudo apt-get install libqt5webkit5-dev qtdeclarative5-dev qt5-qmake cmake
 git clone https://github.com/44670/fbrowser
